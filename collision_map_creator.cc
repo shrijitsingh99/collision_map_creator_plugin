@@ -1,3 +1,6 @@
+#define png_infopp_NULL (png_infopp)NULL
+#define int_p_NULL (int*)NULL
+
 #include <iostream>
 #include <math.h>
 #include <boost/gil/gil_all.hpp>
@@ -7,7 +10,7 @@
 
 #include "gazebo/gazebo.hh"
 #include "gazebo/common/common.hh"
-#include "gazebo/math/Vector3.hh"
+#include "ignition/math/Vector3.hh"
 #include "gazebo/msgs/msgs.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/transport/transport.hh"
@@ -31,7 +34,7 @@ class CollisionMapCreator : public WorldPlugin
     node = transport::NodePtr(new transport::Node());
     world = _parent;
     // Initialize the node with the world name
-    node->Init(world->GetName());
+    node->Init(world->Name());
     std::cout << "Subscribing to: " << "~/collision_map/command" << std::endl;
     commandSubscriber = node->Subscribe("~/collision_map/command",
       &CollisionMapCreator::create, this);
@@ -81,11 +84,11 @@ class CollisionMapCreator : public WorldPlugin
     const double epsHeight = 0.001;
     bool doFill = false;
     std::string entityName;
-    math::Vector3 start, end;
-    start.z = msg->height();
-    end.z = msg->minheight();
+    ignition::math::Vector3<double> start, end;
+    start.Z(msg->height());
+    end.Z(msg->minheight());
 
-    gazebo::physics::PhysicsEnginePtr engine = world->GetPhysicsEngine();
+    gazebo::physics::PhysicsEnginePtr engine = world->Physics();
     engine->InitForThread();
     gazebo::physics::RayShapePtr ray =
       boost::dynamic_pointer_cast<gazebo::physics::RayShape>(
@@ -106,8 +109,10 @@ class CollisionMapCreator : public WorldPlugin
       {
         y = idy * msg->resolution() + msg->lowerleft().y();
 
-        start.x = end.x = x;
-        start.y = end.y = y;
+        end.X(x);
+        end.Y(y);
+        start.X(x);
+        start.Y(y);
         ray->SetPoints(start, end);
         ray->GetIntersection(dist, entityName);
         if (entityName.empty()) // No intersection with an object
@@ -117,9 +122,9 @@ class CollisionMapCreator : public WorldPlugin
         else if (entityName == groundEntityName) // Intersection with the ground entity
         {
           // First check from the other side if it is still the groundEntityName
-          math::Vector3 startTmp(start), endTmp(end);
-          startTmp.z = start.z - dist - epsHeight;
-          endTmp.z = start.z - dist + epsHeight;
+          ignition::math::Vector3<double> startTmp(start), endTmp(end);
+          startTmp.Z(start.Z() - dist - epsHeight);
+          endTmp.Z(start.Z() - dist + epsHeight);
           ray->SetPoints(startTmp, endTmp);
           ray->GetIntersection(dist, entityName);
           if (entityName == groundEntityName)
